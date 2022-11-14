@@ -14,3 +14,4 @@ zkBob [secret key](https://docs.zkbob.com/implementation/zkbob-keys) structure.
 Similar to zkBob, notes and addreses should be private in ZCash (see pages 12 and 13). The secret key structure is also on page 12.
 
 ## Intuition behind zkBob and ZCash secret key structure
+It is clear that the zkBob and ZCash secret key structure are very similar. So, let's try to unwrap if there any logical reasons why.
