@@ -1,6 +1,6 @@
 # A survey of keys & identities used in zero-knowledge applications.
 
-In any shielded asset transfer protocol, a user will have certain information that should be hidden. A secret key known only to the user is the way of achieving this. Broadly speaking, the user can encrypt information it wishes to hide with this secret key. Now let's get more specific and take two case studies zkBob and ZCash and study 1) what information the user hides in each of these protocols and 2) how the secret key is generated.
+In any shielded asset transfer protocol, a user will have certain information that should be hidden. A secret key known only to the user is the way of achieving this. Broadly speaking, the user can encrypt information it wishes to hide with this secret key. Now let's get more specific and take some caste studies (zkBob, ZCash, Aztec) and study 1) what information the user hides in each of these protocols and 2) how the secret key is generated.
 
 ## zkBob
 In zkBob, there are three main pieces of user information that should not be leaked:
@@ -15,3 +15,6 @@ Similar to zkBob, notes and addreses should be private in ZCash (see pages 12 an
 
 ## Intuition behind zkBob and ZCash secret key structure
 It is clear that the zkBob and ZCash secret key structure are very similar. So, let's try to unwrap if there any logical reasons why.
+
+## Aztec
+A key difference between Aztec and zkBob/ZCash is that in Aztec, viewing keys don't necessarily have to be derived from spending keys. Many Aztec apps deterministically and separately derive the spending and viewing keys from signed Ethereum messages.
