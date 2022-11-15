@@ -8,12 +8,11 @@ include "./membership_if_enabled.circom";
 
 // Verifies that merkle proof is correct for given merkle root and a leaf
 // pathIndices bits is an array of 0/1 selectors telling whether given pathElement is on the left or right side of merkle path
-template ManyMerkleProof(levels, length) {
+template GetMerkleRoot(levels) {
     signal input leaf;
     signal input pathElements[levels];
     signal input pathIndices;
-    signal input roots[length];
-    signal input isEnabled;
+    signal output root;
 
     component switcher[levels];
     component hasher[levels];
@@ -34,10 +33,35 @@ template ManyMerkleProof(levels, length) {
 
     // verify that the resultant hash (computed merkle root)
     // is in the set of roots
+    root <== hasher[levels - 1].out;
+}
+
+template multiMerkleProof(groupLevels, subtreeLevels, length) {
+    signal input leaf;
+    signal input pathElements[groupLevels];
+    signal input pathIndices;
+    signal input subtreePathElements[subtreeLevels];
+    signal input subtreePathIndices;
+    signal input roots[length];
+    signal input isEnabled;
+
+    component getSubtreeMerkleRoot = GetMerkleRoot(subtreeLevels);
+    getSubtreeMerkleRoot.leaf <== leaf;
+    getSubtreeMerkleRoot.pathIndices <== subtreePathIndices;
+    for (var i = 0; i < subtreeLevels; i++) {
+        getSubtreeMerkleRoot.pathElements[i] <== subtreePathElements[i];
+    }
+    component getMerkleRoot = GetMerkleRoot(groupLevels);
+    getMerkleRoot.leaf <== getSubtreeMerkleRoot.root;
+    getMerkleRoot.pathIndices <== pathIndices;
+    for (var i = 0; i < groupLevels; i++) {
+        getMerkleRoot.pathElements[i] <== pathElements[i];
+    }
+
     component set = ForceSetMembershipIfEnabled(length);
     set.enabled <== isEnabled;
     for (var i = 0; i < length; i++) {
         set.set[i] <== roots[i];
     }
-    set.element <== hasher[levels - 1].out;
+    set.element <== getMerkleRoot.root;
 }
