@@ -5,7 +5,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../hashers/IHasher.sol";
+import "./IHasher.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 abstract contract MerkleTreeWithHistory is Initializable {
@@ -54,15 +54,15 @@ abstract contract MerkleTreeWithHistory is Initializable {
             currentIndex /= 2;
         }
 
-        currentRootIndex = newRootIndex;
         return Root(currentLevelHash, _index);
     }
 
-    function _insert(bytes32 _leaf) internal returns (uint32 index) {
+    function _insert(bytes32 _leaf) external returns (uint32 index) {
         uint32 _nextIndex = nextIndex;
         Root memory merkle_root = _update(_nextIndex, _leaf);
         nextIndex = _nextIndex + 1;
         uint32 newRootIndex = (currentRootIndex + 1) % ROOT_HISTORY_SIZE;
+        currentRootIndex = newRootIndex;
         roots[newRootIndex] = merkle_root;
         return _nextIndex;
     }

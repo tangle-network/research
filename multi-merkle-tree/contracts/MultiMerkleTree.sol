@@ -6,48 +6,42 @@
 pragma solidity ^0.8.0;
 
 import "./MerkleTree.sol";
+import "./Verifier.sol";
 
 contract MultiMerkleTree is MerkleTree {
     MerkleTree[] public subtrees;
 
-    uint public currTreeIndex;
-    mapping(uint256 => bytes32) public filledSubtrees;
+    uint32 public currTreeIndex;
 
-    IHasher public hasher;
+    Verifier public verifier;
 
-    constructor(uint32 _group_levels, uint32 _tree_leaves, IHasher _hasher) 
+    constructor(uint32 _group_levels, uint32 _tree_levels, IHasher _hasher, Verifier _verifier) 
 		MerkleTree (_group_levels, _hasher)
     {
-        require(_tree_leaves > 0, "_levels should be greater than zero");
-        require(_tree_leaves < 32, "_levels should be less than 32"); 
+        require(_tree_levels > 0, "_levels should be greater than zero");
+        require(_tree_levels < 32, "_levels should be less than 32"); 
         levels = _group_levels;
-        hasher = _hasher;
+        verifier = _verifier;
 
-        for (uint32 i = _tree_leaves; i < _tree_leaves + _group_levels; i++) {
+        for (uint32 i = _tree_levels; i < _tree_levels + _group_levels; i++) {
             filledSubtrees[i] = hasher.zeros(i);
         }
-        subtrees.push(MerkleTree(_tree_leaves, _hasher));
+        subtrees.push(new MerkleTree(_tree_levels, _hasher));
         currTreeIndex = 0;
 
         roots[0] = Root(hasher.zeros(_group_levels + _tree_levels - 1), 0);
     }
 
-    function _insert(bytes32 _leaf) internal returns (uint32 index) {
-        _insert(currTreeIndex, _leaf);
+    function _insertSubtree(bytes32 _leaf) internal returns (uint32 index) {
+        _insertSubtree(currTreeIndex, _leaf);
         return currTreeIndex;
     }
-    function _insert(uint32 _subtreeId, bytes32 _leaf) internal {
+    function _insertSubtree(uint32 _subtreeId, bytes32 _leaf) internal {
     // function _insert(uint32 _subtreeId, bytes32 _leaf) internal returns (uint32 index) {
-        subtrees[_subtreeId].insert(_leaf);
+        subtrees[_subtreeId]._insert(_leaf);
         _update(_subtreeId, _leaf);
         // return _subtreeId;
     }
-
-    // // Modified to insert pairs of leaves for better efficiency
-    // // Disclaimer: using this function assumes both leaves are siblings.
-    // function _insertTwo(bytes32 _leaf1, bytes32 _leaf2) internal returns (uint32 index) {
-    //     subtrees[currTreeIndex].insertTwo(_leaf1, _leaf2);
-    // }
 
     /**
         @dev Whether the root is present in the subtrees
@@ -57,7 +51,7 @@ contract MultiMerkleTree is MerkleTree {
             return false;
         }
         for (uint32 i = 0; i < levels; i++) {
-            if (_subtreeRoot == subtrees[i].root) {
+            if (_subtreeRoot == subtrees[i].getLastRoot()) {
                 return true;
             }
         }
@@ -68,8 +62,23 @@ contract MultiMerkleTree is MerkleTree {
         @dev Returns the last root
     */
     function getSubtreeRoot(uint256 _subtreeId) public view returns (bytes32) {
-        return subtrees[_subtreeId].root;
+        return subtrees[_subtreeId].getLastRoot();
     }
 
-    function _initialize() internal {}
+    function verifyProof(
+            uint[2] memory _a,
+            uint[2][2] memory _b,
+            uint[2] memory _c,
+            uint[2] memory _input
+    ) public view returns (bool) {
+        // TODO: check if roots are valid inside contract
+        bool is_valid = verifier.verifyProof(_a, _b, _c, _input);
+        return is_valid;
+    }
+    /**
+        @dev Verifies zk circuit generated proof
+    */
+    function getSubtreeRoot(uint256 _subtreeId) public view returns (bytes32) {
+        return subtrees[_subtreeId].getLastRoot();
+    }
 }

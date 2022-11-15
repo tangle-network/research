@@ -36,7 +36,7 @@ template GetMerkleRoot(levels) {
     root <== hasher[levels - 1].out;
 }
 
-template multiMerkleProof(groupLevels, subtreeLevels, length) {
+template MultiMerkleProof(groupLevels, subtreeLevels, length) {
     signal input leaf;
     signal input pathElements[groupLevels];
     signal input pathIndices;
@@ -65,3 +65,4 @@ template multiMerkleProof(groupLevels, subtreeLevels, length) {
     }
     set.element <== getMerkleRoot.root;
 }
+
