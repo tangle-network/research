@@ -1,0 +1,6 @@
+[submodule "multi_merkle_tree/lib/forge-std"]
+	path = multi_merkle_tree/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "multi_merkle_tree/lib/openzeppelin-contracts"]
+	path = multi_merkle_tree/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts

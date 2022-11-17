@@ -6,20 +6,19 @@
 pragma solidity ^0.8.0;
 
 import "./MerkleTreeWithHistory.sol";
-import "./IHasher.sol";
 
 contract MerkleTree is MerkleTreeWithHistory {
     constructor(uint32 _levels, IHasher _hasher) {
         require(_levels > 0, "_levels should be greater than zero");
         require(_levels < 32, "_levels should be less than 32");
         levels = _levels;
-        hasher = _hasher;
 
         for (uint32 i = 0; i < _levels; i++) {
-            filledSubtrees[i] = hasher.zeros(i);
+            filledSubtrees[i] = zeros(i);
         }
-
-        roots[0] = Root(hasher.zeros(_levels - 1), 0);
+        currentRootIndex = 1;
+        hasher = _hasher;
+        roots[0] = Root(zeros(_levels - 1), 0);
     }
 
     /**

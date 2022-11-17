@@ -1,0 +1,31 @@
+{
+  "name": "scripts",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "main": "deploy-poseidon.js",
+  "scripts": {
+      "deploy-poseidon": "node deploy-poseidon.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "ethereumjs-util": "^7.1.4",
+    "ethers": "^5.6.4",
+    "ffjavascript": "^0.2.54",
+    "rlp": "^3.0.0",
+    "circomlibjs": "^0.0.8",
+    "chai": "^4.3.5",
+    "prettier": "^2.5.1",
+    "snarkjs": "^0.4.13",
+    "ts-node": "^10.4.0",
+    "tslib": "^2.3.1",
+    "typechain": "^8.1.0",
+    "typescript": "^4.5.5"
+  },
+  "devDependencies": {
+    "typescript": "^4.5.5"
+  }
+}
+

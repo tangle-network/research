@@ -1,0 +1,4 @@
+foundry_multi_merkle_tree/cache
+foundry_multi_merkle_tree/out
+foundry_multi_merkle_tree/lib
+**/node_modules

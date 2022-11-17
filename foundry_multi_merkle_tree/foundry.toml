@@ -1,0 +1,7 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+# libraries = ['Poseidon.sol:PoseidonT3:0x5693a610120eef35686db1dc312a9ddc2dcbb893']
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

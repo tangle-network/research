@@ -3,15 +3,21 @@ node_modules
 coverage
 coverage.json
 typechain
+typechain-types
 
 #Hardhat files
 cache
 artifacts
 
-#fixtures
-**_js
-**.r1cs
-**.wasm
-**.sym
-**.ptau
-build
+
+node_modules
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+
+#Hardhat files
+cache
+artifacts
+
