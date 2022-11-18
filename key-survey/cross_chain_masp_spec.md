@@ -34,10 +34,12 @@ Verifiable viewing keys via Poseidon encryption.
 
 ## `UTXO Data Blob`
 
+## Detection, clue keys from Penumbra
+
 ## More on `assetId`s
 
 ## What Curves to Use?
-
+Check Grumpkin curve.
 
 
 
