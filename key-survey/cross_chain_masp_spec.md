@@ -32,11 +32,13 @@ Verifiable viewing keys via Poseidon encryption.
 
 ## Delegatable Proofs via Spend Authorizing Signatures and Proof Authorizing Key
 
+## Detection and Clue Keys
+1. Doing a join-split transaction and creating output notes for two different recipients, do you have to generate clues w.r.t. both of their clue keys for that transaction
+2. What kind of security assumptions should be made about the detector?
+3. Why FMD clues have to be generated per transcation and not per output note?
+4. Across detection queries can a recipient's pertinent message be deduced in FMD?
+
 ## `UTXO Data Blob`
-
-## Unshielding, Support Contract Calls, Reshielding 
-
-## Detection, clue keys from Penumbra
 
 ## More on `assetId`s
 
