@@ -28,6 +28,8 @@ So, the question is: how do we compute the full viewing key pair and use it to v
 
 Note: a later version of these notes may upgrade to allow for [incoming, outgoing, and full viewing keys](https://protocol.penumbra.zone/main/protocol/addresses_keys/viewing_keys.html). 
 
+## Delegatable Proofs via Spend Authorizing Signatures and Proof Authorizing Key
+
 ## `UTXO Data Blob`
 
 ## More on `assetId`s
