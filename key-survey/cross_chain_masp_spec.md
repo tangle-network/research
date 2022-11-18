@@ -34,6 +34,8 @@ Verifiable viewing keys via Poseidon encryption.
 
 ## `UTXO Data Blob`
 
+## Unshielding, Support Contract Calls, Reshielding 
+
 ## Detection, clue keys from Penumbra
 
 ## More on `assetId`s
