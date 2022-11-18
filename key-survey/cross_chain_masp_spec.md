@@ -37,6 +37,7 @@ Verifiable viewing keys via Poseidon encryption.
 2. What kind of security assumptions should be made about the detector?
 3. Why FMD clues have to be generated per transcation and not per output note?
 4. Across detection queries can a recipient's pertinent message be deduced in FMD?
+5. Verifiable viewing key encryption schemes? Poseidon encryption possible?
 
 ## `UTXO Data Blob`
 
