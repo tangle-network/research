@@ -38,8 +38,6 @@ Verifiable viewing keys via Poseidon encryption.
 
 ## More on `assetId`s
 
-## Claim circuit, swap circuit
-
 ## What Curves to Use?
 Check Grumpkin curve.
 
