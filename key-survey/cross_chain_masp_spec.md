@@ -51,7 +51,7 @@ Check Grumpkin curve.
 Let g be the elliptic curve group generator.
  
 1. $sk$ is the private spending key. We explain how to generate it in a section above.
-2. $a$ is a randomly generated field element. Can also be generated from a mnemonic, etc.
+2. $a$ is a randomly generated field element.
 3. $dk$ is a randomly generated field element. Can also be generated from a mnemonic, etc.
 4. $ak$ is group element $[sk]g$.
 4. $sk(a) = sk \cdot a$
