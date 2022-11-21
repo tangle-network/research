@@ -7,6 +7,7 @@ import { toFixedHex } from "@webb-tools/sdk-core";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { poseidon } from "circomlibjs";
+import { groth16 } from "snarkjs";
 import { MerkleTree, PoseidonHasher } from "../src";
 import { MultiMerkleTree__factory } from "../typechain";
 const TruffleAssert = require("truffle-assertions");
@@ -14,12 +15,12 @@ const assert = require("assert");
 
 // const MerkleTreeWithHistory = artifacts.require('MerkleTreePoseidonMock');
 
-describe("MultiMerkleTree", () => {
+describe.only("MultiMerkleTree", () => {
   let merkleForest;
   let hasherInstance: PoseidonHasher;
   let sender;
   let wallet;
-  const groupLevels = 10;
+  const groupLevels = 5;
   const subtreeLevels = 20;
   let tree: MerkleTree;
   let forest: MerkleTree;
@@ -37,6 +38,11 @@ describe("MultiMerkleTree", () => {
     hasherInstance = await PoseidonHasher.createPoseidonHasher(wallet);
     tree = new MerkleTree(subtreeLevels);
     forest = new MerkleTree(groupLevels);
+
+    const Verifier = await ethers.getContractFactory("Verifier");
+    const verifier = await Verifier.deploy();
+    await verifier.deployed();
+
     const MultiMerkleTree = await ethers.getContractFactory(
       "MultiMerkleTree",
       wallet
@@ -45,13 +51,14 @@ describe("MultiMerkleTree", () => {
     merkleForest = await MultiMerkleTree.deploy(
       groupLevels,
       subtreeLevels,
-      hasherInstance.contract.address
+      hasherInstance.contract.address,
+      verifier.address
     );
   });
 
   describe("#constructor", () => {
     it("should initialize", async () => {
-      const defaultGroupRoot = await hasherInstance.contract.zeros(9);
+      const defaultGroupRoot = await hasherInstance.contract.zeros(groupLevels - 1);
       const groupZeroValue = await hasherInstance.contract.zeros(0);
       const firstSubtree = await merkleForest.filledSubtrees(0);
       const initialRoot = await merkleForest.getLastRoot();
@@ -68,7 +75,7 @@ describe("MultiMerkleTree", () => {
         toFixedHex(initialRoot.toString())
       );
 
-      const defaultSubtreeRoot = await hasherInstance.contract.zeros(19);
+      const defaultSubtreeRoot = await hasherInstance.contract.zeros(subtreeLevels - 1);
       const subtree = await getSubtree(merkleForest, 0);
       const initialSubtreeRoot = await subtree.getLastRoot();
       assert.strictEqual(
@@ -235,6 +242,83 @@ describe("MultiMerkleTree", () => {
       }
 
       assert.strictEqual(BigInt(curr).toString(), merkleRoot.toString());
+    });
+  });
+  describe.only("#verifyProof", async () => {
+    const commitment =
+      "0x0101010101010101010101010101010101010101010101010101010101010101";
+    const wasmPath =
+      "./artifacts/circuits/merkle_proof_test/merkle_proof_test_js/merkle_proof_test.wasm";
+    const zkeyPath = "build/merkle_proof_test/2/circuit_final.zkey";
+    let subtreeRoot: BigNumber;
+    let subtreePathElements: BigNumber[];
+    let subtreePathIndices: number[];
+    let forestRoot: BigNumber;
+    let forestPathElements: BigNumber[];
+    let roots: string[];
+    let forestPathIndices: number[];
+    let merkleRoot: BigNumber;
+    beforeEach(async () => {
+      const groupZeroValue = await BigNumber.from(
+        await hasherInstance.contract.zeros(0)
+      );
+      // Insert commitment into subtree
+      await tree.insert(commitment);
+      // eslint-disable-next-line prettier/prettier
+      const { merkleRoot: subRoot, pathElements: subPathElements, pathIndices: subPathIndices } = tree.path(0);
+
+      subtreeRoot = subRoot;
+      subtreePathElements = subPathElements;
+      subtreePathIndices = subPathIndices;
+
+      // Insert subtree root as a leaf onto forest
+      await forest.insert(subtreeRoot);
+      const { merkleRoot, pathElements, pathIndices } = await forest.path(0);
+      forestRoot = merkleRoot;
+      forestPathElements = pathElements;
+      forestPathIndices = pathIndices;
+
+      // create root array
+      roots = [
+        forestRoot.toString(),
+        BigNumber.from(groupZeroValue.toString()).toString(),
+      ];
+
+      // insert commitment onto contract
+      await merkleForest.insertSubtree(0, toFixedHex(commitment), {
+        from: sender,
+      });
+    });
+    it("should verify proof", async () => {
+      const groupZeroValue = await BigNumber.from(
+        await hasherInstance.contract.zeros(0)
+      );
+      const subtreePathElements1 = subtreePathElements.map((elem) => {
+        return elem.toString();
+      });
+      console.log("groupZeroValue: ", groupZeroValue.toString())
+      console.log("subtreePathElements1: ", subtreePathElements1);
+      let subtreePathIndex = MerkleTree.calculateIndexFromPathIndices(subtreePathIndices);
+      let forestPathIndex = MerkleTree.calculateIndexFromPathIndices(forestPathIndices);
+      const publicInputs = {
+        leaf: commitment,
+        pathElements: forestPathElements.map((elem) => elem.toString()),
+        pathIndices: forestPathIndex,
+        subtreePathElements: subtreePathElements1,
+        subtreePathIndices: subtreePathIndex,
+        roots: [forestRoot.toString(), groupZeroValue.toString()],
+        isEnabled: "1",
+      };
+      console.log("publicInputs: ", publicInputs);
+      console.log("wasmPath: ", wasmPath);
+      const { proof, publicSignals } = await groth16.fullProve(
+        publicInputs,
+        wasmPath,
+        zkeyPath
+      );
+      console.log("proof: ", proof);
+      console.log("publicSignals: ", publicSignals);
+      assert(false);
     });
   });
 });

@@ -7,17 +7,20 @@ pragma solidity ^0.8.0;
 
 import "./MerkleTreeWithHistory.sol";
 import "./MerkleTree.sol";
+import "./Verifier.sol";
 import "hardhat/console.sol";
 
 contract MultiMerkleTree is MerkleTreeWithHistory {
     MerkleTree[] public subtrees;
+    Verifier public verifier;
     // bytes32[] public leaves;
-    constructor(uint32 _group_levels, uint32 _subtree_levels, IHasher _hasher) {
+    constructor(uint32 _group_levels, uint32 _subtree_levels, IHasher _hasher, Verifier _verifier) {
         require(_group_levels > 0, "_group_levels should be greater than zero");
         require(_subtree_levels > 0, "_subtree_levels should be greater than zero");
         require(_group_levels + _subtree_levels < 32, "_group_levels +_subtree_levels should be less than 32");
         levels = _group_levels;
         hasher = _hasher;
+        verifier = _verifier;
 
         for (uint32 i = 0; i < _group_levels; i++) {
             filledSubtrees[i] = hasher.zeros(i);
@@ -40,10 +43,11 @@ contract MultiMerkleTree is MerkleTreeWithHistory {
         return bytes32(_hasher.hashLeftRight(uint256(_left), uint256(_right)));
     }
 
-    function insertSubtree(uint32 _subtreeId, bytes32 _leaf) public returns (uint32 index) {
+    function insertSubtree(uint32 _subtreeId, bytes32 _leaf) public returns (bytes32) {
         subtrees[_subtreeId]._insert(_leaf);
         bytes32 newRoot = subtrees[_subtreeId].getLastRoot();
         _update(_subtreeId, newRoot);
+        return getLastRoot();
         // if (leaves.length <= _subtreeId) {
         //     leaves.push(newRoot);
         // } else {
@@ -63,6 +67,15 @@ contract MultiMerkleTree is MerkleTreeWithHistory {
             }
         }
         return false;
+    }
+
+    function verifyProof(
+        uint[2] memory a,
+        uint[2][2] memory b,
+        uint[2] memory c,
+        uint[2] memory input
+    ) public view returns (bool) {
+        return verifier.verifyProof(a, b, c, input);
     }
 
     // function getLeaf(uint256 _leafId) public view returns (bytes32) {
