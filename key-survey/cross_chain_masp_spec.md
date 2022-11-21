@@ -46,5 +46,18 @@ Verifiable viewing keys via Poseidon encryption.
 ## What Curves to Use?
 Check Grumpkin curve.
 
+## Key Structure
+<img width="595" alt="image" src="https://user-images.githubusercontent.com/7463414/203123019-fb156879-6a66-49aa-bfaf-d41a293f25a7.png">
+Let $g$ be the elliptic curve group generator.
+ 
+1. $sk$ is the private spending key. We explain how to generate it in a section above.
+2. $a$ is a randomly generated field element. Can also be generated from a mnemonic, etc.
+3. $dk$ is a randomly generated field element. Can also be generated from a mnemonic, etc.
+4. $ak$ is group element $[sk]g$.
+4. $sk(a) = $sk \cdot a$
+5. $ak(a) = $[a]ak$
+6. $vk = $Poseidon(ak)$
+7. $pk = [vk]g$
+8. $ck = [dk]g$
 
 
