@@ -1,2 +1,3 @@
 import { PoseidonHasher } from "./PoseidonHasher";
-export { PoseidonHasher };
+import { MerkleTree, MerkleProof } from "./MerkleTree";
+export { PoseidonHasher, MerkleTree, MerkleProof };

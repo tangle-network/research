@@ -11,29 +11,22 @@ import "hardhat/console.sol";
 
 contract MultiMerkleTree is MerkleTreeWithHistory {
     MerkleTree[] public subtrees;
+    // bytes32[] public leaves;
     constructor(uint32 _group_levels, uint32 _subtree_levels, IHasher _hasher) {
         require(_group_levels > 0, "_group_levels should be greater than zero");
         require(_subtree_levels > 0, "_subtree_levels should be greater than zero");
         require(_group_levels + _subtree_levels < 32, "_group_levels +_subtree_levels should be less than 32");
         levels = _group_levels;
         hasher = _hasher;
-        // console.log("levels: %s", levels);
-        // console.log("hasher: %s", address(hasher));
-        // console.log("hasher zeros(0): %d", uint256(hasher.zeros(0)));
-        // console.log("hasher zeros(1): %d", uint256(hasher.zeros(1)));
 
         for (uint32 i = 0; i < _group_levels; i++) {
-            filledSubtrees[i] = hasher.zeros(i+_subtree_levels);
-            // console.log("%d: filledSubtrees(i): %d", i, uint256(filledSubtrees[i]));
-            // console.log("%d: zeros(i): %d", i,  uint256(hasher.zeros(i)));
+            filledSubtrees[i] = hasher.zeros(i);
         }
-        // console.log("filledSubtrees(0): %d", uint256(filledSubtrees[0]));
-        // console.log("filledSubtrees(1): %d", uint256(filledSubtrees[1]));
         for (uint32 i = 0; i <  _group_levels; i++) {
             subtrees.push(new MerkleTree(_subtree_levels, _hasher));
         }
 
-        roots[0] = Root(hasher.zeros(_subtree_levels + _group_levels - 1), 0);
+        roots[0] = Root(hasher.zeros(_group_levels - 1), 0);
     }
 
     /**
@@ -49,7 +42,13 @@ contract MultiMerkleTree is MerkleTreeWithHistory {
 
     function insertSubtree(uint32 _subtreeId, bytes32 _leaf) public returns (uint32 index) {
         subtrees[_subtreeId]._insert(_leaf);
-        _update(_subtreeId, subtrees[_subtreeId].getLastRoot());
+        bytes32 newRoot = subtrees[_subtreeId].getLastRoot();
+        _update(_subtreeId, newRoot);
+        // if (leaves.length <= _subtreeId) {
+        //     leaves.push(newRoot);
+        // } else {
+        //     leaves[_subtreeId] = newRoot;
+        // }
     }
     /**
         @dev Whether the root is present in any of the subtree's history
@@ -58,7 +57,6 @@ contract MultiMerkleTree is MerkleTreeWithHistory {
         if (_root == 0) {
             return false;
         }
-        uint32 _currentRootIndex = currentRootIndex;
         for (uint32 i = 0; i < levels; i++) {
             if (subtrees[i].isKnownRoot(_root)) {
                 return true;
@@ -66,6 +64,15 @@ contract MultiMerkleTree is MerkleTreeWithHistory {
         }
         return false;
     }
+
+    // function getLeaf(uint256 _leafId) public view returns (bytes32) {
+    //     if (_leafId >= leavesolength) {
+    //         return hasher.zeros(0);
+    //     }
+    //     else {
+    //         return leaves[_leafId];
+    //     }
+    // }
 
     /**
         @dev Whether the root is present in any of the subtree's history

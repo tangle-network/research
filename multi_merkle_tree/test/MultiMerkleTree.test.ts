@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later-only
  */
 
-import { MerkleTree, toFixedHex } from "@webb-tools/sdk-core";
+import { toFixedHex } from "@webb-tools/sdk-core";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { poseidon } from "circomlibjs";
-import { PoseidonHasher } from "../src";
+import { MerkleTree, PoseidonHasher } from "../src";
 import { MultiMerkleTree__factory } from "../typechain";
 const TruffleAssert = require("truffle-assertions");
 const assert = require("assert");
@@ -19,9 +19,10 @@ describe("MultiMerkleTree", () => {
   let hasherInstance: PoseidonHasher;
   let sender;
   let wallet;
-  const group_levels = 10;
-  const subtree_levels = 20;
+  const groupLevels = 10;
+  const subtreeLevels = 20;
   let tree: MerkleTree;
+  let forest: MerkleTree;
 
   async function getSubtree(merkleForest: any, index: number) {
     const subtreeAddr = await merkleForest.subtrees(index);
@@ -34,23 +35,24 @@ describe("MultiMerkleTree", () => {
     wallet = signers[0];
     sender = await wallet.getAddress();
     hasherInstance = await PoseidonHasher.createPoseidonHasher(wallet);
-    tree = new MerkleTree(subtree_levels);
+    tree = new MerkleTree(subtreeLevels);
+    forest = new MerkleTree(groupLevels);
     const MultiMerkleTree = await ethers.getContractFactory(
       "MultiMerkleTree",
       wallet
     );
     // const MerkleTreeWithHistory = new MerkleTreeWithHistory__factory();
     merkleForest = await MultiMerkleTree.deploy(
-      group_levels,
-      subtree_levels,
+      groupLevels,
+      subtreeLevels,
       hasherInstance.contract.address
     );
   });
 
   describe("#constructor", () => {
     it("should initialize", async () => {
-      const defaultGroupRoot = await hasherInstance.contract.zeros(29);
-      const groupZeroValue = await hasherInstance.contract.zeros(20);
+      const defaultGroupRoot = await hasherInstance.contract.zeros(9);
+      const groupZeroValue = await hasherInstance.contract.zeros(0);
       const firstSubtree = await merkleForest.filledSubtrees(0);
       const initialRoot = await merkleForest.getLastRoot();
       assert.strictEqual(
@@ -61,9 +63,12 @@ describe("MultiMerkleTree", () => {
         defaultGroupRoot,
         toFixedHex(BigNumber.from(initialRoot.toString()))
       );
+      assert.strictEqual(
+        defaultGroupRoot,
+        toFixedHex(initialRoot.toString())
+      );
 
       const defaultSubtreeRoot = await hasherInstance.contract.zeros(19);
-      // const subtree = await merkleForest.subtrees(0);
       const subtree = await getSubtree(merkleForest, 0);
       const initialSubtreeRoot = await subtree.getLastRoot();
       assert.strictEqual(
@@ -71,11 +76,15 @@ describe("MultiMerkleTree", () => {
         toFixedHex(BigNumber.from(defaultSubtreeRoot.toString()))
       );
       assert.strictEqual(await subtree.levels(), tree.levels);
+      assert.strictEqual(await merkleForest.levels(), forest.levels);
       assert.strictEqual(0, tree.number_of_elements());
       assert.strictEqual(0, await subtree.nextIndex());
 
-      // const merkleRoot = await tree.root();
-      // assert.strictEqual(initialSubtreeRoot, toFixedHex(merkleRoot.toString()));
+      const subtreeRoot = await tree.root();
+      assert.strictEqual(initialSubtreeRoot, toFixedHex(subtreeRoot.toString()));
+      const initialForestRoot = await merkleForest.getLastRoot();
+      const forestRoot = await forest.root();
+      assert.strictEqual(initialForestRoot, toFixedHex(forestRoot.toString()));
     });
   });
 
@@ -191,18 +200,22 @@ describe("MultiMerkleTree", () => {
   });
 
   describe("#insertions using deposit commitments", async () => {
-    it.skip("should rebuild root correctly between native and contract", async () => {
+    it("should rebuild root correctly between native and contract", async () => {
       const commitment =
         "0x0101010101010101010101010101010101010101010101010101010101010101";
       await tree.insert(commitment);
-      const { merkleRoot, pathElements, pathIndices } = await tree.path(0);
-      await merkleForest._insert(toFixedHex(commitment), {
+      const { merkleRoot: subtreeRoot } = await tree.path(0);
+      await forest.insert(subtreeRoot);
+      const { merkleRoot, pathElements, pathIndices } = await forest.path(0);
+      await merkleForest.insertSubtree(0, toFixedHex(commitment), {
         from: sender,
       });
-      const rootFromContract = await merkleForest.getLastRoot();
-      assert.strictEqual(toFixedHex(merkleRoot), rootFromContract.toString());
-
-      let curr = commitment;
+      const rootFromContract = BigNumber.from(await merkleForest.getLastRoot());
+      assert.strictEqual(
+        merkleRoot.toHexString(),
+        rootFromContract.toHexString()
+      );
+      let curr = subtreeRoot.toHexString();
       for (let i = 0; i < pathElements.length; i++) {
         const elt = pathElements[i];
         const side = pathIndices[i];
