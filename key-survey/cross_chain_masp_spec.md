@@ -56,7 +56,7 @@ Let $g$ be the elliptic curve group generator.
 4. $ak$ is group element $[sk]g$.
 4. $sk(a) = sk \cdot a$
 5. $ak(a) = [a]ak$
-6. $vk = $Poseidon(ak)$
+6. $vk = Poseidon(ak)$
 7. $pk = [vk]g$
 8. $ck = [dk]g$
 
