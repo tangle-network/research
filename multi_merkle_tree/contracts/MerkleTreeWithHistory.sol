@@ -34,10 +34,16 @@ abstract contract MerkleTreeWithHistory is Initializable {
     /** @dev this function is defined in a child contract */
     function hashLeftRight(IHasher _hasher, bytes32 _left, bytes32 _right) public virtual returns (bytes32);
 
-    function _insert(bytes32 _leaf) internal returns (uint32 index) {
+    function _insert(bytes32 _leaf) public returns (uint32 index) {
         uint32 _nextIndex = nextIndex;
         require(_nextIndex != uint32(2)**levels, "Merkle tree is full. No more leaves can be added");
-        uint32 currentIndex = _nextIndex;
+        _update(_nextIndex, _leaf);
+        nextIndex = _nextIndex + 1;
+        return _nextIndex;
+    }
+
+    function _update(uint32 _leafIndex, bytes32 _leaf) public returns (uint32 index) {
+        uint32 currentIndex = _leafIndex;
         bytes32 currentLevelHash = _leaf;
         bytes32 left;
         bytes32 right;
@@ -57,10 +63,10 @@ abstract contract MerkleTreeWithHistory is Initializable {
 
         uint32 newRootIndex = (currentRootIndex + 1) % ROOT_HISTORY_SIZE;
         currentRootIndex = newRootIndex;
-        nextIndex = _nextIndex + 1;
         roots[newRootIndex] = Root(currentLevelHash, nextIndex);
-        return _nextIndex;
+        return _leafIndex;
     }
+
 
     // Modified to insert pairs of leaves for better efficiency
     // Disclaimer: using this function assumes both leaves are siblings.
