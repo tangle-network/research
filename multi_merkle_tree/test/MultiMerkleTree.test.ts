@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later-only
  */
 
-import { toFixedHex } from "@webb-tools/sdk-core";
+import { groth16ExportSolidityCallData, toFixedHex } from "@webb-tools/sdk-core";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { poseidon } from "circomlibjs";
 import { groth16 } from "snarkjs";
+import { readFileSync } from "fs";
 import { MerkleTree, PoseidonHasher } from "../src";
 import { MultiMerkleTree__factory } from "../typechain";
 const TruffleAssert = require("truffle-assertions");
@@ -244,12 +245,13 @@ describe.only("MultiMerkleTree", () => {
       assert.strictEqual(BigInt(curr).toString(), merkleRoot.toString());
     });
   });
-  describe.only("#verifyProof", async () => {
+  describe("#verifyProof", async () => {
     const commitment =
       "0x0101010101010101010101010101010101010101010101010101010101010101";
     const wasmPath =
       "./artifacts/circuits/merkle_proof_test/merkle_proof_test_js/merkle_proof_test.wasm";
     const zkeyPath = "build/merkle_proof_test/2/circuit_final.zkey";
+    const verificationFilePath = "build/merkle_proof_test/2/verification_key.json";
     let subtreeRoot: BigNumber;
     let subtreePathElements: BigNumber[];
     let subtreePathIndices: number[];
@@ -289,15 +291,13 @@ describe.only("MultiMerkleTree", () => {
         from: sender,
       });
     });
-    it("should verify proof", async () => {
+    it("local snarkjs verify should work", async () => {
       const groupZeroValue = await BigNumber.from(
         await hasherInstance.contract.zeros(0)
       );
       const subtreePathElements1 = subtreePathElements.map((elem) => {
         return elem.toString();
       });
-      console.log("groupZeroValue: ", groupZeroValue.toString())
-      console.log("subtreePathElements1: ", subtreePathElements1);
       let subtreePathIndex = MerkleTree.calculateIndexFromPathIndices(subtreePathIndices);
       let forestPathIndex = MerkleTree.calculateIndexFromPathIndices(forestPathIndices);
       const publicInputs = {
@@ -309,16 +309,56 @@ describe.only("MultiMerkleTree", () => {
         roots: [forestRoot.toString(), groupZeroValue.toString()],
         isEnabled: "1",
       };
-      console.log("publicInputs: ", publicInputs);
-      console.log("wasmPath: ", wasmPath);
       const { proof, publicSignals } = await groth16.fullProve(
         publicInputs,
         wasmPath,
         zkeyPath
       );
-      console.log("proof: ", proof);
-      console.log("publicSignals: ", publicSignals);
-      assert(false);
+      const vKey = JSON.parse(readFileSync(verificationFilePath));
+      const res = await groth16.verify(vKey, publicSignals, proof);
+
+      assert(res);
+    });
+    it("should verify proof onchain", async () => {
+      const groupZeroValue = await BigNumber.from(
+        await hasherInstance.contract.zeros(0)
+      );
+      const subtreePathElements1 = subtreePathElements.map((elem) => {
+        return elem.toString();
+      });
+      const subtreePathIndex = MerkleTree.calculateIndexFromPathIndices(subtreePathIndices);
+      const forestPathIndex = MerkleTree.calculateIndexFromPathIndices(forestPathIndices);
+      const publicInputs = {
+        leaf: commitment,
+        pathElements: forestPathElements.map((elem) => elem.toString()),
+        pathIndices: forestPathIndex,
+        subtreePathElements: subtreePathElements1,
+        subtreePathIndices: subtreePathIndex,
+        roots: [forestRoot.toString(), groupZeroValue.toString()],
+        isEnabled: "1",
+      };
+      const { proof, publicSignals } = await groth16.fullProve(
+        publicInputs,
+        wasmPath,
+        zkeyPath
+      );
+
+      const calldata = groth16ExportSolidityCallData(proof, publicSignals);
+      // const result = groth16ExportSolidityCallData(proof, publicSignals);
+      const fullProof = JSON.parse("[" + calldata + "]");
+      const piA = fullProof[0];
+      const piB = fullProof[1];
+      const piC = fullProof[2];
+      const publicValues = fullProof[3];
+
+      const isValid = await merkleForest.verifyProof(
+        piA,
+        piB,
+        piC,
+        publicValues
+      );
+
+      assert(isValid);
     });
   });
 });
