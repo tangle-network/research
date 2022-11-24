@@ -36,7 +36,7 @@ contract MerkleForest {
     /**
         @dev Whether the root is present in any of the subtree's history
     */
-    function isKnownSubtreeRoot(bytes32 _root, uint _subtreeId) public view returns (bool) {
+    function isKnownSubtreeRoot(uint _subtreeId, bytes32 _root) public view returns (bool) {
         return subtrees[_subtreeId].isKnownRoot(uint(_root));
     }
 
