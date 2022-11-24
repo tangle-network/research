@@ -2,17 +2,6 @@
 #
 ptau=./powersOfTau28_hez_final_22.ptau
 
-compile () {
-    local outdir="$1" circuit="$2" size="$3"
-    mkdir -p build/$outdir
-    mkdir -p build/$outdir/$size
-    mkdir -p artifacts/circuits/$outdir
-    echo "./circuits/$circuit.circom"
-    circom --r1cs --wasm --sym \
-        -o artifacts/circuits/$circuit \
-        circuits/$circuit.circom;
-    echo -e "Done!\n"
-}
 compile_phase2 () {
     local outdir="$1" circuit="$2" pathToCircuitDir="$3"
     echo $outdir;
@@ -37,10 +26,10 @@ move_verifier() {
     cp $indir/verifier.sol contracts/"Verifier.sol"
 }
 
-echo "compiling multi-merkle-tree"
-compile merkle_proof_test merkle_proof_test 2
-compile_phase2 ./build/merkle_proof_test/2/ merkle_proof_test ./artifacts/circuits/merkle_proof_test/
-move_verifier ./build/merkle_proof_test/2
-# copy_to_fixtures masp_vanchor_2 masp_vanchor_2_2 2 masp_vanchor_2
-#
+outdir=$1
+circuit=$2
 
+compile $oudir $circuit $i
+compile_phase2 ./build/merkle_proof_test_$i/ merkle_proof_test_$i ./artifacts/circuits/merkle_proof_test_$i/
+move_verifier ./build/merkle_proof_test_$i
+done

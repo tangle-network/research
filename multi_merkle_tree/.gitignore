@@ -7,11 +7,5 @@ typechain
 #Hardhat files
 cache
 artifacts
-
-#fixtures
-**_js
-**.r1cs
-**.wasm
-**.sym
-**.ptau
 build
+powersOfTau28_hez_final_22.ptau
