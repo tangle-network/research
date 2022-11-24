@@ -6,14 +6,15 @@
 import { toFixedHex } from "@webb-tools/sdk-core";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { poseidon } from "circomlibjs";
+import { poseidon, poseidon_gencontract as poseidonContract } from "circomlibjs";
 import { MerkleTree, PoseidonHasher } from "../src";
+import { LinkableIncrementalBinaryTree__factory } from "../typechain";
 const TruffleAssert = require("truffle-assertions");
 const assert = require("assert");
 
 // const MerkleTreeWithHistory = artifacts.require('MerkleTreePoseidonMock');
 
-describe("MultiMerkleTree", () => {
+describe.only("MerkleForest", () => {
   let merkleForest;
   let hasherInstance: PoseidonHasher;
   let sender;
@@ -31,21 +32,46 @@ describe("MultiMerkleTree", () => {
     tree = new MerkleTree(subtreeLevels);
     forest = new MerkleTree(groupLevels);
 
-    const Verifier = await ethers.getContractFactory("Verifier");
-    const verifier = await Verifier.deploy();
-    await verifier.deployed();
+    const poseidonABI = poseidonContract.generateABI(2);
+    const poseidonBytecode = poseidonContract.createCode(2);
 
-    const MultiMerkleTree = await ethers.getContractFactory(
-      "MultiMerkleTree",
+    const PoseidonLibFactory = new ethers.ContractFactory(
+      poseidonABI,
+      poseidonBytecode,
       wallet
     );
-    // const MerkleTreeWithHistory = new MerkleTreeWithHistory__factory();
-    merkleForest = await MultiMerkleTree.deploy(
-      groupLevels,
-      subtreeLevels,
-      hasherInstance.contract.address,
-      verifier.address
+    const poseidonLib = await PoseidonLibFactory.deploy();
+    await poseidonLib.deployed();
+
+    const LinkableIncrementalBinaryTree = await ethers.getContractFactory(
+      "LinkableIncrementalBinaryTree",
+      {
+        signer: wallet,
+        libraries: {
+          PoseidonT3: poseidonLib.address,
+        },
+      }
     );
+    const linkableIncrementalBinaryTree =
+      await LinkableIncrementalBinaryTree.deploy();
+    await linkableIncrementalBinaryTree.deployed();
+
+    const MultiMerkleTree = await ethers.getContractFactory("MerkleForest", {
+      signer: wallet,
+      libraries: {
+        PoseidonT3: poseidonLib.address,
+        LinkableIncrementalBinaryTree: linkableIncrementalBinaryTree.address,
+      },
+    });
+    // const libraryAddresses = {
+    //   ['contracts/LinkableIncrementalBinaryTree.sol:LinkableIncrementalBinaryTree']: linkableIncrementalBinaryTree.address,
+    //   ['contracts/Poseidon.sol:PoseidonT3']: poseidonT3Library.address,
+    // };
+    // const factory = new PoseidonHasher__factory(libraryAddresses, signer);
+
+    // const MerkleTreeWithHistory = new MerkleTreeWithHistory__factory();
+    merkleForest = await MultiMerkleTree.deploy(groupLevels, subtreeLevels);
+    await merkleForest.deployed();
   });
 
   describe("#constructor", () => {
@@ -53,13 +79,8 @@ describe("MultiMerkleTree", () => {
       const defaultGroupRoot = await hasherInstance.contract.zeros(
         groupLevels - 1
       );
-      const groupZeroValue = await hasherInstance.contract.zeros(0);
-      const firstSubtree = await merkleForest.filledSubtrees(0);
+
       const initialRoot = await merkleForest.getLastRoot();
-      assert.strictEqual(
-        firstSubtree,
-        toFixedHex(BigNumber.from(groupZeroValue.toString()))
-      );
       assert.strictEqual(
         defaultGroupRoot,
         toFixedHex(BigNumber.from(initialRoot.toString()))
@@ -69,51 +90,28 @@ describe("MultiMerkleTree", () => {
       const defaultSubtreeRoot = await hasherInstance.contract.zeros(
         subtreeLevels - 1
       );
-      const subtree = await getSubtree(merkleForest, 0);
-      const initialSubtreeRoot = await subtree.getLastRoot();
+      const initialSubtreeRoot = await merkleForest.getLastSubtreeRoot(0);
       assert.strictEqual(
-        initialSubtreeRoot,
+        initialSubtreeRoot.toHexString(),
         toFixedHex(BigNumber.from(defaultSubtreeRoot.toString()))
       );
-      assert.strictEqual(await subtree.levels(), tree.levels);
-      assert.strictEqual(await merkleForest.levels(), forest.levels);
-      assert.strictEqual(0, tree.number_of_elements());
-      assert.strictEqual(0, await subtree.nextIndex());
+      const subtree = await merkleForest.subtrees(0);
+      assert.strictEqual(await subtree.depth.toNumber(), tree.levels);
+      const forestData = await merkleForest.merkleForest();
+      assert.strictEqual(forestData.depth.toNumber(), forest.levels);
+      assert.strictEqual(0, forestData.numberOfLeaves.toNumber());
+      assert.strictEqual(0, await forestData.currentRootIndex);
 
       const subtreeRoot = await tree.root();
       assert.strictEqual(
-        initialSubtreeRoot,
+        initialSubtreeRoot.toHexString(),
         toFixedHex(subtreeRoot.toString())
       );
       const initialForestRoot = await merkleForest.getLastRoot();
       const forestRoot = await forest.root();
-      assert.strictEqual(initialForestRoot, toFixedHex(forestRoot.toString()));
+      assert.strictEqual(initialForestRoot.toHexString(), toFixedHex(forestRoot.toString()));
     });
   });
-
-  describe("#hash", () => {
-    it("should hash", async () => {
-      const contractResult = await hasherInstance.contract.hashLeftRight(
-        10,
-        10
-      );
-      const result = BigNumber.from(poseidon([10, 10]));
-      assert.strictEqual(result.toString(), contractResult.toString());
-
-      const zeroValues = [];
-      let currentZeroValue =
-        "21663839004416932945382355908790599225266501822907911457504978515578255421292";
-      zeroValues.push(currentZeroValue);
-
-      for (let i = 0; i < 31; i++) {
-        currentZeroValue = BigNumber.from(
-          poseidon([i, currentZeroValue, currentZeroValue])
-        ).toString();
-        zeroValues.push(currentZeroValue);
-      }
-    });
-  });
-
   describe("#insert", () => {
     it("should insert subtree correctly", async () => {
       // let rootFromContract;
@@ -123,17 +121,26 @@ describe("MultiMerkleTree", () => {
         // const i = 1;
         await merkleForest.insertSubtree(0, toFixedHex(i), { from: sender });
         await tree.insert(i);
-        const { merkleRoot } = await tree.path(i - 1);
-        const subtree = await getSubtree(merkleForest, 0);
-        // rootFromContract = await merkleForest.getLastSubtreeRoot(0);
-        const subtreeRootFromContract = await subtree.getLastRoot();
-        assert.strictEqual(
-          toFixedHex(merkleRoot),
-          subtreeRootFromContract.toString()
+        const { merkleRoot: subtreeRoot } = await tree.path(i - 1);
+        const subtreeRootFromContract = await merkleForest.getLastSubtreeRoot(
+          0
         );
-        const rootFromContract = await merkleForest.getLastSubtreeRoot(0);
-        assert.strictEqual(toFixedHex(merkleRoot), rootFromContract.toString());
-        assert.strictEqual(subtreeRootFromContract, rootFromContract);
+        assert.strictEqual(
+          toFixedHex(subtreeRoot),
+          subtreeRootFromContract.toHexString()
+        );
+        if (i === 1) {
+          await forest.insert(subtreeRoot);
+        } else {
+          await forest.update(0, subtreeRoot);
+        }
+        const { merkleRoot: forestRoot } = await forest.path(0);
+
+        const forestRootFromContract = await merkleForest.getLastRoot();
+        assert.strictEqual(
+          toFixedHex(forestRoot),
+          forestRootFromContract.toHexString()
+        );
       }
     });
 

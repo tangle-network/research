@@ -5,27 +5,21 @@
 
 pragma solidity ^0.8.0;
 
-import "./Verifier.sol";
 import "./LinkableIncrementalBinaryTree.sol";
 
 contract MerkleForest {
     using LinkableIncrementalBinaryTree for LinkableIncrementalTreeData;
 
     /// @dev Gets a group id and returns the group/tree data.
-    mapping(uint256 => LinkableIncrementalTreeData) internal subtrees;
-    LinkableIncrementalTreeData internal merkleForest;
-
-
-    // MerkleTree[] public subtrees;
-    Verifier public verifier;
+    mapping(uint256 => LinkableIncrementalTreeData) public subtrees;
+    LinkableIncrementalTreeData public merkleForest;
 
     // bytes32[] public leaves;
-    constructor(uint32 _group_levels, uint32 _subtree_levels, Verifier _verifier) {
+    constructor(uint32 _group_levels, uint32 _subtree_levels) {
         require(_group_levels > 0, "_group_levels should be greater than zero");
         require(_subtree_levels > 0, "_subtree_levels should be greater than zero");
         require(_group_levels < 32, "_group_levels should be less than 32");
         require(_subtree_levels < 32, "_subtree_levels should be less than 32");
-        verifier = _verifier;
 
         for (uint32 i = 0; i <  _group_levels; i++) {
             subtrees[i].init(_subtree_levels);
@@ -46,13 +40,18 @@ contract MerkleForest {
         return subtrees[_subtreeId].isKnownRoot(uint(_root));
     }
 
-    function verifyProof(
-        uint[2] memory a,
-        uint[2][2] memory b,
-        uint[2] memory c,
-        uint[2] memory input
-    ) public returns (bool) {
-        return verifier.verifyProof(a, b, c, input);
+    /**
+        @dev Returns the last root of the forest
+    */
+    function getLastRoot() public view returns (uint256) {
+        return merkleForest.getLastRoot();
+    }
+
+    /**
+        @dev Whether the root is present in the root history of the forest
+    */
+    function isKnownRoot(uint256 _root) public view returns (bool) {
+        return merkleForest.isKnownRoot(_root);
     }
 
     /**

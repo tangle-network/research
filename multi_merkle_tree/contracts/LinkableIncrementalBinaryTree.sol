@@ -73,7 +73,7 @@ library LinkableIncrementalBinaryTree {
         );
 
         self.depth = depth;
-        self.roots[0] = zeros(depth);
+        self.roots[0] = zeros(depth-1);
     }
 
     /// @dev Inserts a leaf in the tree.
